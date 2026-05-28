@@ -14,18 +14,13 @@ config/name="rich_text_editor"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
 
-[autoload]
-
-myth_ghost_autoload="*uid://cxbnm6qp5683r"
-myth_terminal_autoload="*uid://skiqkluncsub"
-
 [display]
 
 window/stretch/scale=3.0
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/myth/scripts/base/plugin.cfg", "res://addons/myth/scripts/ghost/plugin.cfg", "res://addons/myth/scripts/input/plugin.cfg", "res://addons/myth/scripts/terminal/plugin.cfg")
+enabled=PackedStringArray()
 
 [file_customization]
 
