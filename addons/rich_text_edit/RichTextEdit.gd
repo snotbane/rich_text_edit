@@ -1,5 +1,5 @@
 ## Generic class for word processing. Supports only plain text.
-@tool class_name WordProcessor extends Control
+@tool class_name RichTextEdit extends Control
 
 const LB := "[lb]"
 const RB := "[rb]"
@@ -39,7 +39,7 @@ class ShaperLine extends RefCounted:
 
 		prefix_text = "\n".repeat(line_idx)
 		for i in line_idx:
-			for rm in WordProcessor.REGEX_BBCODE.search_all(rtl.text, bbcode_start, bbcode_end):
+			for rm in RichTextEdit.REGEX_BBCODE.search_all(rtl.text, bbcode_start, bbcode_end):
 				if rm.get_string() == LB or rm.get_string() == RB: continue
 				prefix_text += rm.get_string()
 
@@ -77,8 +77,8 @@ static func get_bbcode_text(raw: String) -> String:
 
 var display: RichTextLabel
 var editor: TextEdit
-var carets: Array[WordProcessorCaret]
-var cursor_caret: WordProcessorCaret
+var carets: Array[RichTextEditCaret]
+var cursor_caret: RichTextEditCaret
 
 
 var shaper_lines: Array[ShaperLine]
@@ -95,7 +95,7 @@ func _refresh_text() -> void:
 	shaper_lines.resize(display.get_line_count())
 	var start := 0
 	for i in shaper_lines.size():
-		shaper_lines[i] = ShaperLine.new(i, start, display)
+		shaper_lines[i] = ShaperLine.new(i, start, 0, display)
 		start += shaper_lines[i].bbcode_line.length() + 1
 
 	# _refresh_carets()
@@ -217,7 +217,7 @@ func _init() -> void:
 func _ready() -> void:
 	if caret_style_box == null: caret_style_box = StyleBoxFlat.new()
 
-	cursor_caret = WordProcessorCaret.new()
+	cursor_caret = RichTextEditCaret.new()
 	add_child(cursor_caret, false, INTERNAL_MODE_BACK)
 	# cursor_caret._refresh_position()
 
@@ -230,7 +230,7 @@ func _ready() -> void:
 func _refresh_carets() -> void:
 	# editor.merge_overlapping_carets()
 	while carets.size() < editor.get_caret_count():
-		var caret := WordProcessorCaret.new()
+		var caret := RichTextEditCaret.new()
 		add_child(caret)
 		carets.push_back(caret)
 

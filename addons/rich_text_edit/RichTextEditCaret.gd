@@ -1,4 +1,4 @@
-class_name WordProcessorCaret extends Panel
+class_name RichTextEditCaret extends Panel
 
 var shaper: RichTextLabel
 
@@ -18,11 +18,11 @@ var editor_column_line: Vector2i:
 	get: return _editor_column_line
 
 
-@onready var word: WordProcessor = get_parent()
+@onready var word: RichTextEdit = get_parent()
 
 
 func _ready() -> void:
-	assert(word is WordProcessor)
+	assert(word is RichTextEdit)
 
 	add_theme_stylebox_override(&"panel", word.caret_style_box)
 
@@ -108,7 +108,7 @@ func set_display_index_from_editor() -> void:
 func set_indeces_from_position(pos: Vector2) -> void:
 	_display_absolute_index = 0
 
-	var shaper_line: WordProcessor.ShaperLine
+	var shaper_line: RichTextEdit.ShaperLine
 	for i in word.shaper_lines.size():
 		shaper_line = word.shaper_lines[i]
 		pos.y -= shaper_line.line_height

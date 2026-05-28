@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dle6t4ft5fs0i"]
 
-[ext_resource type="Script" uid="uid://d0n51dymp6pmn" path="res://addons/rich_text_editor/RichTextEditor.gd" id="1_lto0l"]
+[ext_resource type="Script" uid="uid://d0n51dymp6pmn" path="res://addons/rich_text_edit/RichTextEdit.gd" id="1_rcl8m"]
 
 [sub_resource type="Theme" id="Theme_hanll"]
 TextEdit/constants/caret_width = 2
@@ -42,9 +42,9 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="RichTextEditor" type="Control" parent="MarginContainer/PanelContainer/MarginContainer" unique_id=1399774203]
+[node name="RichTextEdit" type="Control" parent="MarginContainer/PanelContainer/MarginContainer" unique_id=1399774203]
 layout_mode = 2
 theme = SubResource("Theme_hanll")
-script = ExtResource("1_lto0l")
+script = ExtResource("1_rcl8m")
 caret_multiple = true
 caret_style_box = SubResource("StyleBoxFlat_hanll")
