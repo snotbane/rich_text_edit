@@ -29,8 +29,9 @@ func _ready() -> void:
 	size.x = word.editor.get_theme_constant(&"caret_width")
 
 	shaper = word.display.duplicate()
+	shaper.scroll_active = false
 	shaper.mouse_filter = MOUSE_FILTER_IGNORE
-	shaper.modulate = Color.TRANSPARENT
+	shaper.modulate = Color.YELLOW
 	shaper.set_anchors_preset(PRESET_TOP_LEFT)
 	_refresh_shaper()
 	add_child(shaper)
@@ -48,14 +49,14 @@ func _refresh_display():
 	)
 	shaper.text = word.shaper_lines[display_line].text
 
-	var display_column: int = _display_absolute_index - word.display.get_line_range(display_line).x
-	shaper.visible_characters = word.shaper_lines[display_line].snippet_index(display_column)
+	var display_column: int = _display_absolute_index - word.shaper_lines[display_line].range.x
+	shaper.visible_characters = display_column
 
 	await get_tree().process_frame
 
 	position = Vector2(
 		shaper.get_visible_content_rect().size.x,
-		shaper.get_line_offset(display_line)
+		word.shaper_lines[display_line].offset
 	)
 
 	var line_height := word.display.get_line_height(display_line)
@@ -104,40 +105,65 @@ func set_display_index_from_editor() -> void:
 	await _refresh_display()
 
 
+var set_indeces_from_position_last_call_usec: int
 ## Only valid on a cursor caret, so this does not affect the editor.
 func set_indeces_from_position(pos: Vector2) -> void:
+	var this_usec := Time.get_ticks_usec()
+	set_indeces_from_position_last_call_usec = this_usec
+
 	_display_absolute_index = 0
 
 	var shaper_line: RichTextEdit.ShaperLine
-	for i in word.shaper_lines.size():
+	for i in word.shaper_lines.size() + 1:
+		if i == word.shaper_lines.size():
+			_display_absolute_index = shaper_line.range.x
+			break
+
 		shaper_line = word.shaper_lines[i]
-		pos.y -= shaper_line.line_height
-		if pos.y < 0.0: break
+		pos.y -= shaper_line.height
+		if pos.y < 0.0:
+			_display_absolute_index = shaper_line.range.x
+			break
 
-		_display_absolute_index += shaper_line.bbcode_length + 1
+	shaper.text = shaper_line.text
+	# var bin_search_factor = 0.5
+	var nearest_column: int = -1
+	# var nearest_dist: float = INF
 
-	shaper.text = shaper_line.bbcode_line
-	var bin_search_factor = 0.5
-	var nearest_index: int = 0
-	var nearest_dist: float = INF
-
-	for i in shaper_line.bbcode_length:
-		shaper.visible_ratio = bin_search_factor
-		var this_index := shaper.visible_characters
-		if this_index == nearest_index: break
-
+	for i in shaper_line.length:
+		shaper.visible_characters = i
+		# shaper.queue_redraw()
 		await get_tree().process_frame
 
-		var this_diff := pos.x - shaper.get_visible_content_rect().size.x
-		var this_dist := absf(this_diff)
-		if this_dist < nearest_dist:
-			nearest_dist = this_dist
-			nearest_index = this_index
+		if this_usec != set_indeces_from_position_last_call_usec: return
 
-		bin_search_factor += signf(this_diff) * (0.5 ** (i + 2))
-		print("bin_search_factor : %s" % [bin_search_factor])
+		# print("[%s] %s (%s)" % [i, shaper.get_visible_content_rect(), pos.x])
 
-	_display_absolute_index += nearest_index
+		if shaper.get_visible_content_rect().size.x > pos.x:
+			nearest_column = i
+			break
+
+	if nearest_column == -1: nearest_column = shaper_line.length
+	_display_absolute_index += nearest_column
+
+		# shaper.visible_ratio = bin_search_factor
+		# var this_column := shaper.visible_characters
+		# if this_column == nearest_column: break
+
+		# await get_tree().process_frame
+
+		# var this_diff := shaper.get_visible_content_rect().size.x - pos.x
+		# var this_dist := absf(this_diff)
+		# if this_dist < nearest_dist:
+		# 	nearest_dist = this_dist
+		# 	nearest_column = this_column
+
+
+		# bin_search_factor += signf(this_diff) * (0.5 ** (i + 2))
+		# print("i : %s" % [i])
+		# print("bin_search_factor : %s" % [bin_search_factor])
+
+	# _display_absolute_index += nearest_column
 	_editor_column_line = absolute_to_editor_column_line(_display_absolute_index)
 
 	await _refresh_display()

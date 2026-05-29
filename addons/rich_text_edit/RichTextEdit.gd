@@ -9,53 +9,27 @@ static var REGEX_BRACKETS := RegEx.create_from_string(r"[\[\]]")
 
 
 class ShaperLine extends RefCounted:
-	var line_idx: int
+	var index: int
+	var offset: float
+	var height: float
+	var range: Vector2i
+	var length: int:
+		get: return range.y - range.x
 
-	var line_height: float
-	var char_widths: PackedFloat32Array
-
-	var bbcode_start: int
-	var bbcode_end: int
-	var bbcode_length: int:
-		get: return bbcode_end - bbcode_start
-
-	var bbcode_line: String
-
-	var prefix_text: String
-
-	var text: String:
-		get: return prefix_text + bbcode_line
+	var text: String
 
 
-	func _init(__line_idx__: int, __bbcode_start__: int, __bbcode_end__: int, rtl: RichTextLabel) -> void:
-		line_idx = __line_idx__
+	func _init(__index__: int, rtl: RichTextLabel) -> void:
+		index = __index__
+		offset = rtl.get_line_offset(index)
+		height = rtl.get_line_height(index)
+		range = rtl.get_line_range(index)
+		text = rtl.text.substr(range.x, length)
 
-		rtl.get_character_line(__bbcode_start__)
-		line_height = rtl.get_line_height(line_idx)
-
-		bbcode_start = __bbcode_start__
-		bbcode_end = __bbcode_end__
-		if bbcode_end == -1: bbcode_end = rtl.text.length()
-
-		prefix_text = "\n".repeat(line_idx)
-		for i in line_idx:
-			for rm in RichTextEdit.REGEX_BBCODE.search_all(rtl.text, bbcode_start, bbcode_end):
-				if rm.get_string() == LB or rm.get_string() == RB: continue
-				prefix_text += rm.get_string()
-
-		bbcode_line = rtl.text.substr(bbcode_start, bbcode_length if bbcode_end != -1 else -1)
-
+		print("self : %s" % [ self ])
 
 	func _to_string() -> String:
-		return bbcode_line
-
-
-	func snippet(column_index: int) -> String:
-		return prefix_text + bbcode_line.left(column_index)
-
-
-	func snippet_index(column_index: int) -> int:
-		return prefix_text.length() + column_index
+		return "[%s]: \"%s\" (%s..%s)" % [index, text, range.x, range.y]
 
 
 static func get_bbcode_text(raw: String) -> String:
@@ -87,16 +61,17 @@ var shaper_lines: Array[ShaperLine]
 	set(value):
 		editor.text = value
 		_refresh_text()
-func _refresh_text() -> void:
+func _refresh_text():
 	display.text = get_bbcode_text(text)
 
 	assert(editor.text == display.get_parsed_text())
+	# await get_tree().process_frame
 
 	shaper_lines.resize(display.get_line_count())
 	var start := 0
 	for i in shaper_lines.size():
-		shaper_lines[i] = ShaperLine.new(i, start, 0, display)
-		start += shaper_lines[i].bbcode_line.length() + 1
+		shaper_lines[i] = ShaperLine.new(i, display)
+		start += shaper_lines[i].text.length() + 1
 
 	# _refresh_carets()
 
@@ -209,6 +184,10 @@ func _init() -> void:
 	editor.set_anchors_preset(PRESET_FULL_RECT)
 	add_child(editor, false, INTERNAL_MODE_BACK)
 
+	cursor_caret = RichTextEditCaret.new()
+	cursor_caret.modulate = Color.TRANSPARENT
+	add_child(cursor_caret, false, INTERNAL_MODE_BACK)
+
 	editor.caret_changed.connect(_refresh_carets)
 	editor.text_changed.connect(_refresh_text)
 	display.gui_input.connect(_display_gui_input)
@@ -216,10 +195,6 @@ func _init() -> void:
 
 func _ready() -> void:
 	if caret_style_box == null: caret_style_box = StyleBoxFlat.new()
-
-	cursor_caret = RichTextEditCaret.new()
-	add_child(cursor_caret, false, INTERNAL_MODE_BACK)
-	# cursor_caret._refresh_position()
 
 	_refresh_text()
 	_caret_blink_tween_refresh()
@@ -240,13 +215,14 @@ func _refresh_carets() -> void:
 	for caret in carets:
 		caret.set_display_index_from_editor()
 
+	cursor_caret._refresh_shaper()
+
 	_caret_blink_tween_refresh()
 
 
 func _display_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
-		await cursor_caret.set_indeces_from_position(event.position)
-		return
+		cursor_caret.set_indeces_from_position(event.position)
 
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
 		editor.grab_focus.call_deferred()
